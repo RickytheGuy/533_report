@@ -8,7 +8,7 @@
 
 <meta name="author" content="Louis R. Rosas">
 
-<title>Manning’s n Effect on F-Statistic with Different DEMs</title>
+<title>Calibrating Manning’s n Values for Different DEMs and Investigating Flood Inundation Map Combinations to Improve Model Performance</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -21,7 +21,27 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="533_report_files/libs/clipboard/clipboard.min.js"></script>
@@ -37,6 +57,35 @@ ul.task-list li input[type="checkbox"] {
 <link href="533_report_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="533_report_files/libs/bootstrap/bootstrap-4d7f0bce1131f3e5f9547cd857cfbfc8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -52,12 +101,14 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#data-and-methods" id="toc-data-and-methods" class="nav-link" data-scroll-target="#data-and-methods"><span class="header-section-number">2</span> Data and Methods</a>
   <ul class="collapse">
   <li><a href="#dems" id="toc-dems" class="nav-link" data-scroll-target="#dems"><span class="header-section-number">2.1</span> DEMs</a></li>
-  <li><a href="#mannings-n-classification" id="toc-mannings-n-classification" class="nav-link" data-scroll-target="#mannings-n-classification"><span class="header-section-number">2.2</span> Manning’s n Classification</a></li>
+  <li><a href="#mannings-n-classification" id="toc-mannings-n-classification" class="nav-link" data-scroll-target="#mannings-n-classification"><span class="header-section-number">2.2</span> Manning’s <em>n</em> Classification</a></li>
   <li><a href="#reference-flood-inundation-maps" id="toc-reference-flood-inundation-maps" class="nav-link" data-scroll-target="#reference-flood-inundation-maps"><span class="header-section-number">2.3</span> Reference Flood Inundation Maps</a></li>
   <li><a href="#data-analysis-methods" id="toc-data-analysis-methods" class="nav-link" data-scroll-target="#data-analysis-methods"><span class="header-section-number">2.4</span> Data Analysis Methods</a></li>
   </ul></li>
-  <li><a href="#data-analysis" id="toc-data-analysis" class="nav-link" data-scroll-target="#data-analysis"><span class="header-section-number">3</span> Data Analysis</a></li>
+  <li><a href="#results" id="toc-results" class="nav-link" data-scroll-target="#results"><span class="header-section-number">3</span> Results</a></li>
   <li><a href="#conclusions" id="toc-conclusions" class="nav-link" data-scroll-target="#conclusions"><span class="header-section-number">4</span> Conclusions</a></li>
+  <li><a href="#ai-disclaimer" id="toc-ai-disclaimer" class="nav-link" data-scroll-target="#ai-disclaimer"><span class="header-section-number">5</span> AI Disclaimer</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references"><span class="header-section-number">6</span> References</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="533_report.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
 </div>
@@ -65,7 +116,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Manning’s n Effect on F-Statistic with Different DEMs</h1>
+<h1 class="title">Calibrating Manning’s <em>n</em> Values for Different DEMs and Investigating Flood Inundation Map Combinations to Improve Model Performance</h1>
 </div>
 
 
@@ -90,50 +141,98 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="introduction" class="level1" data-number="1">
 <h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
-<p>Manning’s n is a coefficient used in hydrology to represent the roughness of a channel or surface, which affects the flow of water. Different Digital Elevation Models (DEMs) can yield different values of Manning’s n, which in turn can affect the flood extents generated by hydraulic models. By comparing a flood inundation map generated using a DEM with a known Manning’s n value to a reference flood inundation map, we can calculate the F-statistic, which is a measure of the similarity between the two maps. In this analysis, we will investigate how Manning’s n values applied to different DEMs affect the F-statistic, whether these differences are statistically significant, and what implications this has for flood modeling.</p>
+<p>The BYU Hydroinformatics lab has developed a global hydrologic model, dubbed the Group on Earth Observations GEO Global Water Sustainability (GEOGLOWS) River Forecast System (RFS), which simulates river flow conditions across millions of river reaches globally. The lab is interested in developing flood inundation mapping capabilities, which involves generating flood inundation maps based on the simulated river flow conditions. There are two key factors that can influence the accuracy of flood inundation maps: the choice of Digital Elevation Model (DEM) and the value of Manning’s <em>n</em>. Manning’s <em>n</em> is a coefficient used in hydraulic models to represent the roughness of a channel or surface. Different Digital Elevation Models (DEMs) might require different values of Manning’s <em>n</em> to generate the same flood extents. Additionally, DEMs themselves may have varying levels of accuracy and resolution. In this analysis, we will investigate how Manning’s <em>n</em> values applied to different DEMs affect the Critical Success Index (CSI) when comparing generated flood inundation maps to reference maps, and investigate if there is a way of combining the flood inundation maps generated from different DEMs to improve the overall performance of the flood inundation mapping.</p>
 </section>
 <section id="data-and-methods" class="level1" data-number="2">
 <h1 data-number="2"><span class="header-section-number">2</span> Data and Methods</h1>
-<p>The primary datasets we need are the DEMs, the Manning’s n classification coverage, and the reference or “ground truth” flood inundation maps. Other datasets required for running the hydraulic model are held constant and will not be considered further (they have been tested in previous analyses). A summary of the datasets used can be found in <span class="citation" data-cites="tab-datasets">@tab-datasets</span>.</p>
-<section id="dems" class="level2" data-number="2.1">
-<h2 data-number="2.1" class="anchored" data-anchor-id="dems"><span class="header-section-number">2.1</span> DEMs</h2>
-<p>We use the following DEMs in our analysis: ASTER, AW3D30, COPDEM, FABDEM, GEDTM, NASADEM, SRTM, and USGS. Each DEM has different spatial resolutions and accuracies, which can affect the derived Manning’s n values and the flood extents. The USGS DEM, from the USGS 3DEP program, is considered the most accurate and serves as our reference DEM.</p>
-</section>
-<section id="mannings-n-classification" class="level2" data-number="2.2">
-<h2 data-number="2.2" class="anchored" data-anchor-id="mannings-n-classification"><span class="header-section-number">2.2</span> Manning’s n Classification</h2>
-<p>Manning’s n values are assigned based on land cover classifications. We use land cover from ESA WorldCover 2021, which has a spatial resolution of 10 meters. The land cover classes are categorized into six types: Tree Cover, Grassland, Cropland, Built-up, Barren, and Water. There are additional land cover classes in the dataset, but they are occur infrequently in the typical flood plain and are not included in this analysis.</p>
-</section>
-<section id="reference-flood-inundation-maps" class="level2" data-number="2.3">
-<h2 data-number="2.3" class="anchored" data-anchor-id="reference-flood-inundation-maps"><span class="header-section-number">2.3</span> Reference Flood Inundation Maps</h2>
-<p>We use reference flood inundation maps generated frum the USGS Flood Inundation Mapping program. These maps are created using advanced hydraulic models, calibrated on observed flood events, and are considered the “ground truth” for our analysis. We have data for 30 sites across the US, with multiple flood stages per site, and for each stage we have a reference flood inundation map.</p>
+<p>The primary datasets we need are the DEMs, the Manning’s <em>n</em> classification coverage, and the reference or “ground truth” flood inundation maps. Other datasets required for running the hydraulic model are held constant and will not be considered further (they have been tested in previous analyses). A summary of the datasets used can be found in <a href="#tbl-datasets" class="quarto-xref">Table&nbsp;1</a>.</p>
+<div id="tbl-datasets" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-datasets-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: Summary of datasets used in the analysis.
+</figcaption>
+<div aria-describedby="tbl-datasets-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
-<caption>tab-datasets Summary of datasets used in the analysis.</caption>
 <colgroup>
-<col style="width: 72%">
 <col style="width: 27%">
+<col style="width: 39%">
+<col style="width: 33%">
 </colgroup>
 <thead>
 <tr class="header">
 <th>Dataset</th>
 <th>Description</th>
+<th>Reference</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>DEMs</td>
-<td>ASTER, AW3D30, COPDEM, FABDEM, GEDTM, NASADEM, SRTM, USGS (reference)</td>
+<td>ASTER</td>
+<td>Advanced Spaceborne Thermal Emission and Reflection Radiometer (ASTER) Global Digital Elevation Model Version 3 (GDEM 003)</td>
+<td><span class="citation" data-cites="nasametiaistjapan_spacesystems_and_usjapan_aster_science_team_aster_2019">(<a href="#ref-nasametiaistjapan_spacesystems_and_usjapan_aster_science_team_aster_2019" role="doc-biblioref">NASA/METI/AIST/Japan Spacesystems and U.S./Japan ASTER Science Team 2019</a>)</span></td>
 </tr>
 <tr class="even">
-<td>Manning’s n Classification</td>
-<td>Land cover from ESA WorldCover 2021 categorized into Tree Cover, Grassland, Cropland, Built-up, Barren, and Water</td>
+<td>AW3D30</td>
+<td>JAXA ALOS World 3D - 30m (AW3D30) Global Digital Surface Model</td>
+<td><span class="citation" data-cites="xu_importance_2021">(<a href="#ref-xu_importance_2021" role="doc-biblioref">Xu et al. 2021</a>)</span></td>
 </tr>
 <tr class="odd">
-<td>Reference Flood Inundation Maps</td>
+<td>COPDEM</td>
+<td>Copernicus Digital Elevation Model (COPDEM) Global 30m</td>
+<td><span class="citation" data-cites="nandam_framework_2024">(<a href="#ref-nandam_framework_2024" role="doc-biblioref">Nandam and Patel 2024</a>)</span></td>
+</tr>
+<tr class="even">
+<td>FABDEM</td>
+<td>Forest and Buildings Removed Digital Elevation Model (FABDEM) Global 30m</td>
+<td><span class="citation" data-cites="nandam_framework_2024">(<a href="#ref-nandam_framework_2024" role="doc-biblioref">Nandam and Patel 2024</a>)</span></td>
+</tr>
+<tr class="odd">
+<td>GEDTM</td>
+<td>Global Ensemble Digital Terrain (GEDTM) Global 30m</td>
+<td><span class="citation" data-cites="ho_global_2025">(<a href="#ref-ho_global_2025" role="doc-biblioref">Ho and Hengl 2025</a>)</span></td>
+</tr>
+<tr class="even">
+<td>NASADEM</td>
+<td>NASA Digital Elevation Model (NASADEM) Global 30m</td>
+<td><span class="citation" data-cites="opentopography_nasadem_2021">(<a href="#ref-opentopography_nasadem_2021" role="doc-biblioref">OpenTopography 2021</a>)</span></td>
+</tr>
+<tr class="odd">
+<td>SRTM</td>
+<td>Shuttle Radar Topography Mission (SRTM) Global 30m</td>
+<td><span class="citation" data-cites="ferreira_vertical_2021">(<a href="#ref-ferreira_vertical_2021" role="doc-biblioref">Ferreira and Cabral 2021</a>)</span></td>
+</tr>
+<tr class="even">
+<td>USGS</td>
+<td>USGS 3D Elevation Program (3DEP) 10m, US only</td>
+<td><span class="citation" data-cites="noauthor_13rd_2025">(<a href="#ref-noauthor_13rd_2025" role="doc-biblioref"><span>“1/3rd Arc-Second <span>Digital</span> <span>Elevation</span> <span>Models</span> (<span>DEMs</span>) - <span>USGS</span> <span>National</span> <span>Map</span> <span>3DEP</span> <span>Downloadable</span> <span>Data</span> <span>Collection</span> - <span>ScienceBase</span>-<span>Catalog</span>”</span> 2025</a>)</span></td>
+</tr>
+<tr class="odd">
+<td>ESA WorldCover 2021</td>
+<td>Land cover from ESA WorldCover 2021 categorized into Tree Cover, Grassland, Cropland, Built-up, Barren, and Water, among others</td>
+<td><span class="citation" data-cites="zanaga_esa_2022">(<a href="#ref-zanaga_esa_2022" role="doc-biblioref">Zanaga et al. 2022</a>)</span></td>
+</tr>
+<tr class="even">
+<td>USGS FIM</td>
 <td>Flood inundation maps from USGS Flood Inundation Mapping program for 30 sites across the US with multiple flood stages</td>
+<td><span class="citation" data-cites="noauthor_web_nodate">(<a href="#ref-noauthor_web_nodate" role="doc-biblioref"><span>“Web <span>Informatics</span> and <span>Mapping</span> (<span>WIM</span>)”</span> n.d.</a>)</span></td>
 </tr>
 </tbody>
 </table>
-<p><a href="#fig-dems" class="quarto-xref">Figure&nbsp;1</a> shows a visualization of different DEMs for a sample site, illustrating the differences in elevation data that can lead to different Manning’s n values and flood extents.</p>
+</div>
+</figure>
+</div>
+<section id="dems" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="dems"><span class="header-section-number">2.1</span> DEMs</h2>
+<p>We use the following DEMs in our analysis: ASTER, AW3D30, COPDEM, FABDEM, GEDTM, NASADEM, SRTM, and USGS. Each DEM has different spatial resolutions and accuracies, which can affect the derived Manning’s <em>n</em> values and the flood extents. The USGS DEM, from the USGS 3DEP program, is considered the most accurate and serves as our reference DEM.</p>
+</section>
+<section id="mannings-n-classification" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="mannings-n-classification"><span class="header-section-number">2.2</span> Manning’s <em>n</em> Classification</h2>
+<p>Manning’s <em>n</em> values are assigned based on land cover classifications. We use land cover from ESA WorldCover 2021, which has a spatial resolution of 10 meters. The land cover classes are categorized into six types: Tree Cover, Grassland, Cropland, Built-up, Barren, and Water. There are additional land cover classes in the dataset, but they are occur infrequently in the typical flood plain and are not included in this analysis.</p>
+</section>
+<section id="reference-flood-inundation-maps" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="reference-flood-inundation-maps"><span class="header-section-number">2.3</span> Reference Flood Inundation Maps</h2>
+<p>We use reference flood inundation maps generated from the USGS Flood Inundation Mapping program. These maps are created using advanced hydraulic models, calibrated on observed flood events, and are considered the “ground truth” for our analysis. We have data for 30 sites across the US, with multiple flood stages per site, and for each stage we have a reference flood inundation map.</p>
+<p><a href="#fig-dems" class="quarto-xref">Figure&nbsp;1</a> shows a visualization of different DEMs for a sample site, illustrating the differences in elevation data that can lead to different Manning’s <em>n</em> values and flood extents.</p>
 <div id="fig-dems" class="quarto-layout-panel">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-dems-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
@@ -155,30 +254,64 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-dems-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;1: <strong>Visualization of different DEMs for a sample site.</strong>
+Figure&nbsp;1: Visualization of different DEMs for a sample site.
 </figcaption>
 </figure>
 </div>
 </section>
 <section id="data-analysis-methods" class="level2" data-number="2.4">
 <h2 data-number="2.4" class="anchored" data-anchor-id="data-analysis-methods"><span class="header-section-number">2.4</span> Data Analysis Methods</h2>
-<p>The goal is to find the optimal Manning’s n value for each DEM that maximizes the F-statistic when comparing the generated flood inundation map to the reference map. The approach we use is as follows: 1. Define a range of allowable Manning’s n values for each land cover type. We chose a range of 0.0001 to 10, which gives us a wide range of values to test. 2. Using Bayesian minimization, we begin with an initial guess of Manning’s n values for each land cover type and iteratively adjust these values to maximize the F-statistic. The objective function will run the model using the Manning’s n provided. We invert the F-statistic to minimize it instead of maximizing it (F-statistic ranges from 0-1, 1 being a perfect match). This process is repeated for each DEM, resulting in an optimal set of Manning’s n values for each DEM. 3. We then compare the optimal Manning’s n values across DEMs and analyze how they affect the F-statistic scores. We also perform statistical tests to determine if the differences in F-statistic scores across DEMs are significant, and whether certain land cover types have a greater influence on the scores than others.</p>
+<p>There are two main components to our analysis: 1) calibrating Manning’s <em>n</em> values for each DEM, and 2) investigating if there is a way of combining the flood inundation maps generated from different DEMs to improve the overall performance of the flood inundation mapping. We first calibrate Manning’s <em>n</em> values for each DEM, and then use the optimal Manning’s <em>n</em> values to generate flood inundation maps for each DEM, which we then attempt to combine in different ways. The approach we use is as follows:</p>
+<ol type="1">
+<li>Define a range of allowable Manning’s <em>n</em> values for each land cover type. We chose a range of 0.0001 to 10, which gives us a wide range of values to test. Typical values for Manning’s <em>n</em> tend to vary between 0.01 and 0.5, but we want to allow for a wider range to ensure we are not missing any potential optimal values.</li>
+<li>Using Bayesian minimization, we begin with an initial guess of Manning’s <em>n</em> values for each land cover type and iteratively adjust these values to maximize the CSI. The objective function will run the hydraulic model using the Manning’s <em>n</em> provided. We train on 70% of the sites, leaving the remaining 30% to be used as validation, to check for over-fitting. The validation sites are evaluated every 10 iterations, with the total number of iterations for training being 400. We invert the CSI to minimize it instead of maximizing it (CSI ranges from 0-1, 1 being a perfect match). This process is repeated for each DEM, resulting in an optimal set of Manning’s <em>n</em> values for each.</li>
+<li>Using the optimal Manning’s <em>n</em> values for each DEM, we generate flood inundation maps for each DEM and compare them to the reference maps using the CSI. We then investigate several methods of combining the flood inundation maps, including:
+<ol type="i">
+<li>K-of-n voting: A pixel is classified as flooded if at least K out of N DEM-derived flood maps classify it as flooded. We test the whole range of K values from 1 to N (where N is 7, the number of DEMs tested).</li>
+<li>Logistic regression: For each site, we train a logistic regression model using the DEM-derived flood maps as features and the reference flood map as the target. The logistic regression model learns the optimal weights for each DEM-derived flood map to maximize the CSI. We chose to group by site due to memory concerns with training a single model across all sites, but this is something that could be explored in future work. For each site-trained model, we evaluate on all sites and stages.</li>
+</ol></li>
+</ol>
 </section>
 </section>
-<section id="data-analysis" class="level1" data-number="3">
-<h1 data-number="3"><span class="header-section-number">3</span> Data Analysis</h1>
-<p>Optimal Manning’s n values were discovered for each DEM using Bayesian minimization. To ensure the optimizer converged, we ran for 400 iterations. To ensure the optimizer did not overfit, we split the data into a training set (70%) and a test set (30%), and computed the inverse F-statistic every 10 iterations during the optimization process. An example of this convergence and validation process for FABDEM is shown in <a href="#fig-convergence" class="quarto-xref">Figure&nbsp;2</a>. From the figure, we can see that the optimizer coverge after about 250 iterations, and that the validation score closesly follows the training score, indicating that the optimizer is not overfitting. This trend is similar across all DEMs, with convergence occurring between 200-300 iterations and no evidence of overfitting.</p>
-<div id="fig-convergence" class="quarto-float quarto-figure quarto-figure-center anchored" width="800">
+<section id="results" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Results</h1>
+<div id="fig-floods" class="quarto-layout-panel">
 <figure class="quarto-float quarto-float-fig figure">
-<div aria-describedby="fig-convergence-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="official_convergence_fabdem.png" id="fig-convergence" class="img-fluid figure-img" width="800">
+<div aria-describedby="fig-floods-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<p><img src="533_images/flood_reference.png" class="img-fluid figure-img"> (a) Reference flood inundation map</p>
 </div>
-<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig quarto-uncaptioned" id="fig-convergence-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;2
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<p><img src="533_images/flood_fabdem.png" class="img-fluid figure-img"> (b) FABDEM flood inundation map</p>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<p><img src="533_images/flood_usgs.png" class="img-fluid figure-img"> (c) USGS DEM flood inundation map</p>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<p><img src="533_images/flood_aster.png" class="img-fluid figure-img"> (d) ASTER DEM flood inundation map</p>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-floods-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Visualization of flood inundation maps for Fort Morgan, Colorado, at a stage of 18 feet.
 </figcaption>
 </figure>
 </div>
-<p><a href="#fig-n-vs-fstat" class="quarto-xref">Figure&nbsp;3</a> shows the optimal Manning’s n values for each land cover type and DEM, along with the corresponding F-statistic scores. The vertical red dotted lines indicate the range of typical Manning’s n values for each land cover type, based on literature values.</p>
+<p>Optimal Manning’s <em>n</em> values were discovered for each DEM using Bayesian minimization. Examples of flood maps for the same sample site and stage for four DEMs are shown in <a href="#fig-floods" class="quarto-xref">Figure&nbsp;2</a>. An example of the convergence and validation process for FABDEM is shown in <a href="#fig-convergence" class="quarto-xref">Figure&nbsp;3</a>. From the figure, we can see that the optimizer converges after about 250 iterations, and that the validation score closely follows the training score, indicating that the optimizer is not over-fitting. This trend is similar across all DEMs, with convergence occurring between 200-300 iterations and no evidence of over-fitting.</p>
+<div id="fig-convergence" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-convergence-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="533_images/official_convergence_fabdem.png" class="img-fluid figure-img" width="800">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-convergence-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: FABDEM convergence plot
+</figcaption>
+</figure>
+</div>
+<p><a href="#fig-n-vs-fstat" class="quarto-xref">Figure&nbsp;4</a> shows the converged-upon Manning’s <em>n</em> values for each land cover type and DEM, along with the corresponding CSI scores. The vertical red dotted lines indicate the range of typical Manning’s <em>n</em> values for each land cover type, based on literature values.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div id="fig-n-vs-fstat" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -187,43 +320,15 @@ Figure&nbsp;2
 <img src="533_report_files/figure-html/fig-n-vs-fstat-1.png" class="img-fluid figure-img" width="768">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-n-vs-fstat-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;3: Manning’s n vs Average F−Statistic Score for Different DEMs
+Figure&nbsp;4: Manning’s <em>n</em> vs Average F−Statistic Score for Different DEMs
 </figcaption>
 </figure>
 </div>
 </div>
 </div>
-<p>Looking at this figure, we see some interesting trends. For tree cover, grassland, and water land cover classes, the optimal Manning’s n values fall within the typical range of values found in literature. They also are quite consistnent across the majority of DEMs. This suggests that for these land cover types, the choice of DEM may not have a large influence on the optimal Manning’s n values. For cropland, built-up, and barren land cover classes, there is much more variability in the optimal Manning’s n values across DEMs, and many of the optimal values fall outside the typical range found in literature. This suggests that for these land cover types, the choice of DEM can have a significant influence. We must note that grassland, tree cover, and water are the most common land cover types in the flood plain. This may explain why the optimal Manning’s n values for these land cover types are more consistent across DEMs, as there is more data to inform the optimization process. In contrast, cropland, built-up, and barren land cover types are less common in the flood plain, which may lead to more variability in the optimal Manning’s n values across DEMs.</p>
-<p>Another thing to note is the order of the DEMs. USGS scores the highest, followed by FABDEM and SRTM. We expect USGS to perform the best, as it is the most accurate DEM. FABDEM and SRTM are related products, suggesting that these DEMs may be better for flood modeling applications than the other DEMs tested.</p>
-<p><a href="#fig-objective-usgs" class="quarto-xref">Figure&nbsp;4</a> shows the partial dependence plot for the USGS DEM. The partial dependance plot shows the relationship between each land cover type’s Manning’s n value and the F-statistic score, while holding the other land cover types constant. From the plot, we can see that for tree cover, grassland, and water, there is a clear parabloic relationship, with a clear minimia defined for each. The other land cover types show a linear relationship with a slope close to 0, suggesting that changes in Manning’s n for these land cover types do not have a large influence on the F-statistic score. This is consistent with our earlier observation that the optimal Manning’s n values for these land cover types are more consistent across DEMs, and that the choice of DEM may not have a large influence for these land cover types.</p>
-<div id="fig-objective-usgs" class="quarto-float quarto-figure quarto-figure-center anchored" width="800">
-<figure class="quarto-float quarto-float-fig figure">
-<div aria-describedby="fig-objective-usgs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="official_objective_usgs.png" id="fig-objective-usgs" class="img-fluid figure-img" width="800">
-</div>
-<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig quarto-uncaptioned" id="fig-objective-usgs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;4
-</figcaption>
-</figure>
-</div>
-<p><a href="#fig-objective-gedtm" class="quarto-xref">Figure&nbsp;5</a> shows the partial dependence plot for the GEDTM. This partial dependence plot for this DEM looks quite different compared to the others. This plot shows a relationship where F-statistic scores are maximized at the upper bound of Manning’s n for nearly all land cover classes. This is an unusual relationship, and suggests that the optimization process may not have converged properly for this DEM, or that there may be some issue with the data or model for this DEM. This is further supported by the fact that GEDTM has the lowest F-statistic scores among all DEMs tested. For these reasons, the GEDTM does not seem suitable for flood modeling applications.</p>
-<div id="fig-objective-gedtm" class="quarto-float quarto-figure quarto-figure-center anchored" width="800">
-<figure class="quarto-float quarto-float-fig figure">
-<div aria-describedby="fig-objective-gedtm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="official_objective_gedtm.png" id="fig-objective-gedtm" class="img-fluid figure-img" width="800">
-</div>
-<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig quarto-uncaptioned" id="fig-objective-gedtm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;5
-</figcaption>
-</figure>
-</div>
-<p>I used a linear mixed effects model to test whether the differences in F-statistic scores across DEMs were statistically significant, while accounting for the fact that we have multiple stages per site (non-independence of observations) and that there may be different variances across DEMs. <a href="#fig-fstat" class="quarto-xref">Figure&nbsp;6</a> shows the distribution of F-statistic scores by method.</p>
-<p><span class="citation" data-cites="tab-lme">@tab-lme</span> reveals some key insights. First, USGS performs better than any other DEM-derived flood map, and is statistically significant in all cases. The closest to the USGS is the FABDEM weighted DEM (~0.049), the single FABDEM (0.067) and the SRTM (0.077). These DEM-derived flood maps are the most suitable alternatives to the USGS DEM for flood modeling applications. The other DEMs, especiall GEDTM and ASTER, have much larger differences in F-statistic scores compared to the USGS, and may not be suitable for flood modeling applications.</p>
-<p>The model diagnostics indicate that there may be some issues with the model fit, as there is some evidence of underdispersion and non-normality of residuals. However, given the complexity of the data and the fact that we have accounted for non-independence and heteroscedasticity, we will proceed with interpreting the model results, but with caution.</p>
-<!-- However, looking at the model diagnostics, DHARMa diagnostic indicates moderate underdispersion and extreme residuals in some stages/sites. Fixed effects estimates remain interpretable, but standard errors may be underestimated. For this reason, I try to use a robust linear mixed effects model. -->
-<!-- - Intercept of 0.569 as baseline F-statistic score for the reference DEM (USGS).
-- All flood maps derived from other DEMs, including those that have been combined to try to improve F-statistic, performs signifcantly worse than the USGS DEM, some with very large differences.
-- Flood maps from FABDEM, and the weighted FABDEM show the smallest differences in F-statistic scores compared to the USGS. The smallest difference is 0.04, which is signficant in terms of F-statistic scores, but may not be significant in terms of flood extents. -->
+<p>Looking at this figure, we see some interesting trends. For tree cover, grassland, and water land cover classes, the optimal Manning’s <em>n</em> values fall within the typical range of values found in literature. They also are quite consistent across the majority of DEMs. This suggests that for these land cover types, the choice of DEM may not have a large influence on the optimal Manning’s <em>n</em> values. For cropland, built-up, and barren land cover classes, there is much more variability in the optimal Manning’s <em>n</em> values across DEMs, and many of the optimal values fall outside the typical range found in literature. This suggests that for these land cover types, the choice of DEM can have a significant influence. We must note that grassland, tree cover, and water are the most common land cover types in the flood plain. This may explain why the optimal Manning’s <em>n</em> values for these land cover types are more consistent across DEMs, as there is more data to inform the optimization process. In contrast, cropland, built-up, and barren land cover types are less common in the flood plain, which may lead to more variability in the optimal Manning’s <em>n</em> values across DEMs.</p>
+<p>Another thing to note is the order of the DEMs. USGS scores the highest, followed by FABDEM and SRTM. We expect USGS to perform the best, as it is the most accurate DEM. FABDEM and SRTM are related products, suggesting that these DEMs may be better for flood modeling applications than the other DEMs tested. GEDTM and ASTER perform the worst, with GEDTM having optimal Manning’s <em>n</em> values that are much higher than typical values found in literature. This suggests that these DEMs may not be suitable for flood modeling applications.</p>
+<p><a href="#fig-fstat" class="quarto-xref">Figure&nbsp;5</a> shows the distribution of CSI scores for all sites and stages, using several combination methods. Method’s labeled “*_single” indicate the CSI scores for flood inundation maps generated using a single DEM with its optimal Manning’s <em>n</em> values. Methods labeled “all_majority_&gt;=K” indicate the CSI scores for flood inundation maps generated using the K-of-N voting method, where K indicates the number of flood maps that must classify a pixel as flooded for it to be classified as flooded in the combined map. The methods labeled “all_lr_*” indicate the CSI scores for flood inundation maps generated using the logistic regression method, where the remaining text contains indicator numbers that indicate which flood maps were selected by the model and what their weights and biases were.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div id="fig-fstat" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -232,420 +337,92 @@ Figure&nbsp;5
 <img src="533_report_files/figure-html/fig-fstat-1.png" class="img-fluid figure-img" width="768">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-fstat-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;6: Distribution of F-statistic Scores
+Figure&nbsp;5: Distribution of CSI Scores
 </figcaption>
 </figure>
 </div>
 </div>
 </div>
-<div class="cell" data-tbl-cap="Linear Mixed Effects Model Results">
-<div class="cell-output cell-output-stdout">
-<pre><code> contrast                                      estimate      SE  df z.ratio
- usgs_single - (all_f-weighted)                 0.04865 0.00639 Inf   7.611
- usgs_single - fabdem_single                    0.07025 0.00639 Inf  10.990
- usgs_single - all_majority_&gt;= 4                0.08400 0.00639 Inf  13.141
- usgs_single - all_cnn                          0.08742 0.00639 Inf  13.676
- usgs_single - fabdem_single_optimized          0.06733 0.00648 Inf  10.396
- usgs_single - all_majority_&gt;= 3                0.07964 0.00639 Inf  12.459
- usgs_single - copdem_single                    0.09807 0.00639 Inf  15.342
- usgs_single - all_majority_&gt;= 5                0.11611 0.00639 Inf  18.164
- usgs_single - srtm_single                      0.07746 0.00639 Inf  12.118
- usgs_single - all_majority_&gt;= 2                0.09270 0.00639 Inf  14.502
- usgs_single - (all_edge-weighted)              0.13043 0.00639 Inf  20.405
- usgs_single - nasadem_single                   0.15158 0.00639 Inf  23.714
- usgs_single - aw3d30_single                    0.15895 0.00639 Inf  24.866
- usgs_single - all_majority_&gt;= 1                0.13805 0.00639 Inf  21.597
- usgs_single - aster_single                     0.18823 0.00639 Inf  29.447
- usgs_single - gedtm_single                     0.21965 0.00639 Inf  34.363
- usgs_single - all_majority_&gt;= 6                0.21834 0.00639 Inf  34.158
- usgs_single - all_majority_&gt;= 7                0.40669 0.00639 Inf  63.623
- usgs_single - all_cnn_w_fabdem                 0.58917 0.00639 Inf  92.171
- (all_f-weighted) - fabdem_single               0.02160 0.00639 Inf   3.379
- (all_f-weighted) - all_majority_&gt;= 4           0.03535 0.00639 Inf   5.530
- (all_f-weighted) - all_cnn                     0.03877 0.00639 Inf   6.065
- (all_f-weighted) - fabdem_single_optimized     0.01868 0.00648 Inf   2.885
- (all_f-weighted) - all_majority_&gt;= 3           0.03099 0.00639 Inf   4.848
- (all_f-weighted) - copdem_single               0.04942 0.00639 Inf   7.731
- (all_f-weighted) - all_majority_&gt;= 5           0.06746 0.00639 Inf  10.553
- (all_f-weighted) - srtm_single                 0.02881 0.00639 Inf   4.507
- (all_f-weighted) - all_majority_&gt;= 2           0.04405 0.00639 Inf   6.891
- (all_f-weighted) - (all_edge-weighted)         0.08178 0.00639 Inf  12.794
- (all_f-weighted) - nasadem_single              0.10293 0.00639 Inf  16.104
- (all_f-weighted) - aw3d30_single               0.11030 0.00639 Inf  17.255
- (all_f-weighted) - all_majority_&gt;= 1           0.08940 0.00639 Inf  13.986
- (all_f-weighted) - aster_single                0.13958 0.00639 Inf  21.836
- (all_f-weighted) - gedtm_single                0.17100 0.00639 Inf  26.753
- (all_f-weighted) - all_majority_&gt;= 6           0.16969 0.00639 Inf  26.547
- (all_f-weighted) - all_majority_&gt;= 7           0.35804 0.00639 Inf  56.012
- (all_f-weighted) - all_cnn_w_fabdem            0.54052 0.00639 Inf  84.560
- fabdem_single - all_majority_&gt;= 4              0.01375 0.00639 Inf   2.151
- fabdem_single - all_cnn                        0.01717 0.00639 Inf   2.686
- fabdem_single - fabdem_single_optimized       -0.00292 0.00648 Inf  -0.451
- fabdem_single - all_majority_&gt;= 3              0.00939 0.00639 Inf   1.469
- fabdem_single - copdem_single                  0.02782 0.00639 Inf   4.352
- fabdem_single - all_majority_&gt;= 5              0.04586 0.00639 Inf   7.174
- fabdem_single - srtm_single                    0.00721 0.00639 Inf   1.128
- fabdem_single - all_majority_&gt;= 2              0.02244 0.00639 Inf   3.511
- fabdem_single - (all_edge-weighted)            0.06018 0.00639 Inf   9.415
- fabdem_single - nasadem_single                 0.08133 0.00639 Inf  12.724
- fabdem_single - aw3d30_single                  0.08870 0.00639 Inf  13.876
- fabdem_single - all_majority_&gt;= 1              0.06780 0.00639 Inf  10.607
- fabdem_single - aster_single                   0.11798 0.00639 Inf  18.457
- fabdem_single - gedtm_single                   0.14940 0.00639 Inf  23.373
- fabdem_single - all_majority_&gt;= 6              0.14809 0.00639 Inf  23.167
- fabdem_single - all_majority_&gt;= 7              0.33644 0.00639 Inf  52.633
- fabdem_single - all_cnn_w_fabdem               0.51892 0.00639 Inf  81.181
- all_majority_&gt;= 4 - all_cnn                    0.00342 0.00639 Inf   0.535
- all_majority_&gt;= 4 - fabdem_single_optimized   -0.01667 0.00648 Inf  -2.573
- all_majority_&gt;= 4 - all_majority_&gt;= 3         -0.00436 0.00639 Inf  -0.681
- all_majority_&gt;= 4 - copdem_single              0.01407 0.00639 Inf   2.201
- all_majority_&gt;= 4 - all_majority_&gt;= 5          0.03211 0.00639 Inf   5.024
- all_majority_&gt;= 4 - srtm_single               -0.00654 0.00639 Inf  -1.023
- all_majority_&gt;= 4 - all_majority_&gt;= 2          0.00870 0.00639 Inf   1.361
- all_majority_&gt;= 4 - (all_edge-weighted)        0.04643 0.00639 Inf   7.264
- all_majority_&gt;= 4 - nasadem_single             0.06759 0.00639 Inf  10.574
- all_majority_&gt;= 4 - aw3d30_single              0.07495 0.00639 Inf  11.726
- all_majority_&gt;= 4 - all_majority_&gt;= 1          0.05405 0.00639 Inf   8.456
- all_majority_&gt;= 4 - aster_single               0.10423 0.00639 Inf  16.306
- all_majority_&gt;= 4 - gedtm_single               0.13566 0.00639 Inf  21.223
- all_majority_&gt;= 4 - all_majority_&gt;= 6          0.13434 0.00639 Inf  21.017
- all_majority_&gt;= 4 - all_majority_&gt;= 7          0.32269 0.00639 Inf  50.483
- all_majority_&gt;= 4 - all_cnn_w_fabdem           0.50517 0.00639 Inf  79.031
- all_cnn - fabdem_single_optimized             -0.02009 0.00648 Inf  -3.101
- all_cnn - all_majority_&gt;= 3                   -0.00778 0.00639 Inf  -1.217
- all_cnn - copdem_single                        0.01065 0.00639 Inf   1.666
- all_cnn - all_majority_&gt;= 5                    0.02869 0.00639 Inf   4.488
- all_cnn - srtm_single                         -0.00996 0.00639 Inf  -1.558
- all_cnn - all_majority_&gt;= 2                    0.00528 0.00639 Inf   0.826
- all_cnn - (all_edge-weighted)                  0.04301 0.00639 Inf   6.729
- all_cnn - nasadem_single                       0.06417 0.00639 Inf  10.039
- all_cnn - aw3d30_single                        0.07153 0.00639 Inf  11.190
- all_cnn - all_majority_&gt;= 1                    0.05063 0.00639 Inf   7.921
- all_cnn - aster_single                         0.10081 0.00639 Inf  15.771
- all_cnn - gedtm_single                         0.13224 0.00639 Inf  20.688
- all_cnn - all_majority_&gt;= 6                    0.13092 0.00639 Inf  20.482
- all_cnn - all_majority_&gt;= 7                    0.31927 0.00639 Inf  49.947
- all_cnn - all_cnn_w_fabdem                     0.50175 0.00639 Inf  78.495
- fabdem_single_optimized - all_majority_&gt;= 3    0.01231 0.00648 Inf   1.901
- fabdem_single_optimized - copdem_single        0.03074 0.00648 Inf   4.746
- fabdem_single_optimized - all_majority_&gt;= 5    0.04878 0.00648 Inf   7.531
- fabdem_single_optimized - srtm_single          0.01013 0.00648 Inf   1.564
- fabdem_single_optimized - all_majority_&gt;= 2    0.02536 0.00648 Inf   3.916
- fabdem_single_optimized - (all_edge-weighted)  0.06310 0.00648 Inf   9.743
- fabdem_single_optimized - nasadem_single       0.08425 0.00648 Inf  13.009
- fabdem_single_optimized - aw3d30_single        0.09162 0.00648 Inf  14.146
- fabdem_single_optimized - all_majority_&gt;= 1    0.07072 0.00648 Inf  10.920
- fabdem_single_optimized - aster_single         0.12090 0.00648 Inf  18.667
- fabdem_single_optimized - gedtm_single         0.15232 0.00648 Inf  23.520
- fabdem_single_optimized - all_majority_&gt;= 6    0.15101 0.00648 Inf  23.317
- fabdem_single_optimized - all_majority_&gt;= 7    0.33935 0.00648 Inf  52.399
- fabdem_single_optimized - all_cnn_w_fabdem     0.52184 0.00648 Inf  80.575
- all_majority_&gt;= 3 - copdem_single              0.01843 0.00639 Inf   2.883
- all_majority_&gt;= 3 - all_majority_&gt;= 5          0.03647 0.00639 Inf   5.705
- all_majority_&gt;= 3 - srtm_single               -0.00218 0.00639 Inf  -0.341
- all_majority_&gt;= 3 - all_majority_&gt;= 2          0.01305 0.00639 Inf   2.042
- all_majority_&gt;= 3 - (all_edge-weighted)        0.05079 0.00639 Inf   7.946
- all_majority_&gt;= 3 - nasadem_single             0.07194 0.00639 Inf  11.255
- all_majority_&gt;= 3 - aw3d30_single              0.07931 0.00639 Inf  12.407
- all_majority_&gt;= 3 - all_majority_&gt;= 1          0.05841 0.00639 Inf   9.138
- all_majority_&gt;= 3 - aster_single               0.10859 0.00639 Inf  16.987
- all_majority_&gt;= 3 - gedtm_single               0.14001 0.00639 Inf  21.904
- all_majority_&gt;= 3 - all_majority_&gt;= 6          0.13870 0.00639 Inf  21.698
- all_majority_&gt;= 3 - all_majority_&gt;= 7          0.32705 0.00639 Inf  51.164
- all_majority_&gt;= 3 - all_cnn_w_fabdem           0.50953 0.00639 Inf  79.712
- copdem_single - all_majority_&gt;= 5              0.01804 0.00639 Inf   2.822
- copdem_single - srtm_single                   -0.02061 0.00639 Inf  -3.224
- copdem_single - all_majority_&gt;= 2             -0.00537 0.00639 Inf  -0.840
- copdem_single - (all_edge-weighted)            0.03236 0.00639 Inf   5.063
- copdem_single - nasadem_single                 0.05352 0.00639 Inf   8.373
- copdem_single - aw3d30_single                  0.06088 0.00639 Inf   9.524
- copdem_single - all_majority_&gt;= 1              0.03998 0.00639 Inf   6.255
- copdem_single - aster_single                   0.09016 0.00639 Inf  14.105
- copdem_single - gedtm_single                   0.12159 0.00639 Inf  19.022
- copdem_single - all_majority_&gt;= 6              0.12027 0.00639 Inf  18.816
- copdem_single - all_majority_&gt;= 7              0.30862 0.00639 Inf  48.282
- copdem_single - all_cnn_w_fabdem               0.49110 0.00639 Inf  76.829
- all_majority_&gt;= 5 - srtm_single               -0.03865 0.00639 Inf  -6.046
- all_majority_&gt;= 5 - all_majority_&gt;= 2         -0.02341 0.00639 Inf  -3.663
- all_majority_&gt;= 5 - (all_edge-weighted)        0.01432 0.00639 Inf   2.241
- all_majority_&gt;= 5 - nasadem_single             0.03548 0.00639 Inf   5.550
- all_majority_&gt;= 5 - aw3d30_single              0.04284 0.00639 Inf   6.702
- all_majority_&gt;= 5 - all_majority_&gt;= 1          0.02194 0.00639 Inf   3.433
- all_majority_&gt;= 5 - aster_single               0.07212 0.00639 Inf  11.283
- all_majority_&gt;= 5 - gedtm_single               0.10355 0.00639 Inf  16.199
- all_majority_&gt;= 5 - all_majority_&gt;= 6          0.10223 0.00639 Inf  15.993
- all_majority_&gt;= 5 - all_majority_&gt;= 7          0.29058 0.00639 Inf  45.459
- all_majority_&gt;= 5 - all_cnn_w_fabdem           0.47306 0.00639 Inf  74.007
- srtm_single - all_majority_&gt;= 2                0.01524 0.00639 Inf   2.383
- srtm_single - (all_edge-weighted)              0.05297 0.00639 Inf   8.287
- srtm_single - nasadem_single                   0.07412 0.00639 Inf  11.596
- srtm_single - aw3d30_single                    0.08149 0.00639 Inf  12.748
- srtm_single - all_majority_&gt;= 1                0.06059 0.00639 Inf   9.479
- srtm_single - aster_single                     0.11077 0.00639 Inf  17.329
- srtm_single - gedtm_single                     0.14219 0.00639 Inf  22.245
- srtm_single - all_majority_&gt;= 6                0.14088 0.00639 Inf  22.040
- srtm_single - all_majority_&gt;= 7                0.32923 0.00639 Inf  51.505
- srtm_single - all_cnn_w_fabdem                 0.51171 0.00639 Inf  80.053
- all_majority_&gt;= 2 - (all_edge-weighted)        0.03773 0.00639 Inf   5.903
- all_majority_&gt;= 2 - nasadem_single             0.05889 0.00639 Inf   9.213
- all_majority_&gt;= 2 - aw3d30_single              0.06625 0.00639 Inf  10.365
- all_majority_&gt;= 2 - all_majority_&gt;= 1          0.04536 0.00639 Inf   7.096
- all_majority_&gt;= 2 - aster_single               0.09553 0.00639 Inf  14.945
- all_majority_&gt;= 2 - gedtm_single               0.12696 0.00639 Inf  19.862
- all_majority_&gt;= 2 - all_majority_&gt;= 6          0.12564 0.00639 Inf  19.656
- all_majority_&gt;= 2 - all_majority_&gt;= 7          0.31399 0.00639 Inf  49.122
- all_majority_&gt;= 2 - all_cnn_w_fabdem           0.49647 0.00639 Inf  77.670
- (all_edge-weighted) - nasadem_single           0.02115 0.00639 Inf   3.310
- (all_edge-weighted) - aw3d30_single            0.02852 0.00639 Inf   4.461
- (all_edge-weighted) - all_majority_&gt;= 1        0.00762 0.00639 Inf   1.192
- (all_edge-weighted) - aster_single             0.05780 0.00639 Inf   9.042
- (all_edge-weighted) - gedtm_single             0.08922 0.00639 Inf  13.959
- (all_edge-weighted) - all_majority_&gt;= 6        0.08791 0.00639 Inf  13.753
- (all_edge-weighted) - all_majority_&gt;= 7        0.27626 0.00639 Inf  43.218
- (all_edge-weighted) - all_cnn_w_fabdem         0.45874 0.00639 Inf  71.766
- nasadem_single - aw3d30_single                 0.00736 0.00639 Inf   1.152
- nasadem_single - all_majority_&gt;= 1            -0.01353 0.00639 Inf  -2.117
- nasadem_single - aster_single                  0.03664 0.00639 Inf   5.732
- nasadem_single - gedtm_single                  0.06807 0.00639 Inf  10.649
- nasadem_single - all_majority_&gt;= 6             0.06675 0.00639 Inf  10.443
- nasadem_single - all_majority_&gt;= 7             0.25510 0.00639 Inf  39.909
- nasadem_single - all_cnn_w_fabdem              0.43758 0.00639 Inf  68.457
- aw3d30_single - all_majority_&gt;= 1             -0.02090 0.00639 Inf  -3.269
- aw3d30_single - aster_single                   0.02928 0.00639 Inf   4.580
- aw3d30_single - gedtm_single                   0.06071 0.00639 Inf   9.497
- aw3d30_single - all_majority_&gt;= 6              0.05939 0.00639 Inf   9.291
- aw3d30_single - all_majority_&gt;= 7              0.24774 0.00639 Inf  38.757
- aw3d30_single - all_cnn_w_fabdem               0.43022 0.00639 Inf  67.305
- all_majority_&gt;= 1 - aster_single               0.05017 0.00639 Inf   7.850
- all_majority_&gt;= 1 - gedtm_single               0.08160 0.00639 Inf  12.766
- all_majority_&gt;= 1 - all_majority_&gt;= 6          0.08029 0.00639 Inf  12.560
- all_majority_&gt;= 1 - all_majority_&gt;= 7          0.26863 0.00639 Inf  42.026
- all_majority_&gt;= 1 - all_cnn_w_fabdem           0.45112 0.00639 Inf  70.574
- aster_single - gedtm_single                    0.03143 0.00639 Inf   4.917
- aster_single - all_majority_&gt;= 6               0.03011 0.00639 Inf   4.711
- aster_single - all_majority_&gt;= 7               0.21846 0.00639 Inf  34.177
- aster_single - all_cnn_w_fabdem                0.40094 0.00639 Inf  62.725
- gedtm_single - all_majority_&gt;= 6              -0.00132 0.00639 Inf  -0.206
- gedtm_single - all_majority_&gt;= 7               0.18703 0.00639 Inf  29.260
- gedtm_single - all_cnn_w_fabdem                0.36951 0.00639 Inf  57.808
- all_majority_&gt;= 6 - all_majority_&gt;= 7          0.18835 0.00639 Inf  29.466
- all_majority_&gt;= 6 - all_cnn_w_fabdem           0.37083 0.00639 Inf  58.014
- all_majority_&gt;= 7 - all_cnn_w_fabdem           0.18248 0.00639 Inf  28.548
- p.value
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.0837
- &lt;0.0001
- &lt;0.0001
-  0.2993
-  0.0002
- &lt;0.0001
- &lt;0.0001
-  0.0011
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.8302
-  0.4388
-  1.0000
-  0.9962
-  0.0023
- &lt;0.0001
-  0.9999
-  0.0555
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  1.0000
-  0.5260
-  1.0000
-  0.8002
- &lt;0.0001
-  1.0000
-  0.9986
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.1807
-  0.9997
-  0.9835
-  0.0012
-  0.9923
-  1.0000
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.9379
-  0.0004
- &lt;0.0001
-  0.9919
-  0.0134
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.3005
- &lt;0.0001
-  1.0000
-  0.8852
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.3401
-  0.1310
-  1.0000
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.0336
-  0.7751
- &lt;0.0001
- &lt;0.0001
-  0.0711
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.6740
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.1029
-  0.0014
-  0.9998
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.9999
-  0.8484
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.1154
-  0.0008
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-  0.0002
-  0.0004
- &lt;0.0001
- &lt;0.0001
-  1.0000
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
- &lt;0.0001
-
-Degrees-of-freedom method: asymptotic 
-P value adjustment: tukey method for comparing a family of 20 estimates </code></pre>
+<p>There are several significant results to note in the figure. The USGS DEM flood map still scores significantly higher than any other map or combination of maps. This highlights the importance of good quality DEM data over quantity of DEM data. The same order of the single DEM maps is observed, with FABDEM and SRTM performing the best. The K-of-N voting method does not perform very well, with the best K being 3, and the worst K being 7. This suggests that simply combining multiple DEM-derived flood maps using a voting method is not an effective way to improve flood inundation mapping performance. There are several logistic regression methods, with many performing poorly, likely due to over-fitting. However, several models converged on using FABDEM and GEDTM (labeled as “all_lr”0:*,4:*” in the figure), disregarding the other DEMs. The magnitude of the weights indicate that the formula is essentially a logical or, where a pixel is flooded is either of the flood maps are flooded. This gave an increase in CSI of about 0.04 over FABDEM alone, which is a significant improvement. This came as a surprise, given that GEDTM performed very poorly on its own.</p>
+<p>After some investigation, we found that the reason the seemingly best and worst global DEMs were paired together comes down to the CSI score itself, precision, and recall. The CSI score is calculated as <span class="math display">\[
+CSI = \frac{TP}{TP + FP + FN}
+\]</span></p>
+<p>where <span class="math inline">\(TP\)</span> is true positives, <span class="math inline">\(FP\)</span> is false positives, and <span class="math inline">\(FN\)</span> is false negatives. Alternatively, the CSI score can be computed as <span class="math display">\[
+CSI = \frac{1}{\frac{1}{Recall} + \frac{1}{Precision}}
+\]</span> where <span class="math inline">\(Recall = \frac{TP}{TP + FN}\)</span> and <span class="math inline">\(Precision = \frac{TP}{TP + FP}\)</span>. The CSI score is essentially a harmonic mean of precision and recall (similar to the F1 metric), meaning that it will be high only if both precision and recall are high. It is used commonly in meteorology and flood modeling to evaluate the performance of binary classification models, such as flood inundation maps, where a large number of true negatives can skew other metrics like accuracy <span class="citation" data-cites="mbizvo_dependence_2024">(<a href="#ref-mbizvo_dependence_2024" role="doc-biblioref">Mbizvo and Larner 2024</a>)</span>. The recall and precision distributions for the different DEM-derived flood maps are shown in <a href="#fig-recall" class="quarto-xref">Figure&nbsp;6</a> and <a href="#fig-precision" class="quarto-xref">Figure&nbsp;7</a>, respectively.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-recall" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-recall-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="533_report_files/figure-html/fig-recall-1.png" class="img-fluid figure-img" width="768">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-recall-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Distribution of Recall Scores
+</figcaption>
+</figure>
 </div>
 </div>
-<!-- ```{r}
-library(DHARMa)
-
-sim_res <- simulateResiduals(model)
-plot(sim_res)
-``` -->
-<!-- ```{r}
-model_gamma <- glmer((f.statistic + 1e-6) ~ method + (1 | site/stage),
-                     data = df,
-                     family = Gamma(link = "log"))
-sim_res <- simulateResiduals(model_gamma)
-plot(sim_res)
-testDispersion(sim_res)
-``` -->
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-precision" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-precision-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="533_report_files/figure-html/fig-precision-1.png" class="img-fluid figure-img" width="768">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-precision-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;7: Distribution of Precision Scores
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The FABDEM flood map has very high recall but low precision, meaning it classifies many pixels as flooded, including many that are not flooded (many false positives). The GEDTM flood map has a low recall but a very high precision, meaning it classifies fewer pixels as flooded, but most of those it does classify as flooded are actually flooded (few false positives). This makes sense when looking back at the Manning’s <em>n</em> calibration in <a href="#fig-n-vs-fstat" class="quarto-xref">Figure&nbsp;4</a>. The values chosen for GEDTM were as high as possible (10), indicating that in order to get a high CSI score for GEDTM, the roughness needed to be high to raise the water surface elevation, to flood more pixels. When we combine the two maps using a logical or, we get the high recall of FABDEM and the high precision of GEDTM, leading to a significant increase in CSI.</p>
+<p>Because GEDTM requires such extreme Manning’s <em>n</em> values to achieve its optimal CSI score, it is likely that there are other factors beyond Manning’s <em>n</em> that influence its performance. This would explain why GEDTM performs poorly on its own, but can still provide value when combined with FABDEM, as it may be capturing some true positives that FABDEM is missing, without contributing many false positives. In the context of flood mapping, we often care more about recall than precision, as it is generally better to over-predict flooding (high recall) than to under-predict flooding (low recall), since the consequences of missing a flooded area can be severe. However, having some level of precision is also important, as too many false positives can lead to unnecessary evacuations and other costly actions. The combination of FABDEM and GEDTM seems to strike a good balance between recall and precision, leading to a higher overall CSI score. Another option may be to reduce the Manning’s <em>n</em> values for FABDEM, since that would reduce the number of false positives, and may lead to an even higher CSI score when combined with GEDTM, but that is something that would require further investigation.</p>
 </section>
 <section id="conclusions" class="level1" data-number="4">
 <h1 data-number="4"><span class="header-section-number">4</span> Conclusions</h1>
-<p>In this analysis, we investigated how Manning’s n values applied to different DEMs affect the F-statistic scores when comparing generated flood inundation maps to reference maps. We found that for certain land cover types (tree cover, grassland, water), the optimal Manning’s n values were consistent across DEMs and fell within typical ranges found in literature. For other land cover types (cropland, built-up, barren), there was more variability in optimal Manning’s n values across DEMs, suggesting that the choice of DEM can have a significant influence on these land cover types. In terms of overall F-statistic scores, the USGS DEM performed the best, followed by FABDEM and SRTM. The other DEMs, especially GEDTM and ASTER, had much lower F-statistic scores and may not be suitable for flood modeling applications. These findings highlight the importance of carefully selecting DEMs and calibrating Manning’s n values for accurate flood modeling.</p>
-<p>Future work will include testing methods of globla flood inundation mapping using this information on optimal Manning’s n values and DEM selection, and investigating how these findings may differ in different geographic regions or for different types of flood events.</p>
+<p>In this analysis, we investigated how Manning’s <em>n</em> values applied to different DEMs affect the Critical Success Index (CSI) when comparing generated flood inundation maps to reference maps, and investigated if there is a way of combining the flood inundation maps generated from different DEMs to improve the overall performance of the flood inundation mapping. We found that the choice of DEM can have a significant influence on the optimal Manning’s <em>n</em> values for certain land cover types, particularly cropland, built-up, and barren land cover types. We also found that simply combining multiple DEM-derived flood maps using a voting method is not an effective way to improve flood inundation mapping performance. However, logistic regression models discovered that combining the FABDEM and GEDTM flood maps can lead to a significant improvement in CSI, likely due to the complementary strengths of the two maps in terms of recall and precision. This suggests that there may be value in exploring more sophisticated methods of combining DEM-derived flood maps, beyond simple voting methods. Future work could explore other machine learning models for combining flood maps, such as random forests or neural networks, and could also investigate the using other metrics besides CSI for evaluating the model’s performance, such as using a weighted CSI that places more emphasis on recall than precision, which may be more appropriate for flood mapping applications.</p>
+</section>
+<section id="ai-disclaimer" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> AI Disclaimer</h1>
+<p>This report was generated with the assistance of AI tools. While these tools were used to help with writing and code generation, all content was reviewed and edited by the author to ensure accuracy and coherence. The author takes full responsibility for the final content of this report.</p>
+</section>
+<section id="references" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> References</h1>
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-noauthor_13rd_2025" class="csl-entry" role="listitem">
+<span>“1/3rd Arc-Second <span>Digital</span> <span>Elevation</span> <span>Models</span> (<span>DEMs</span>) - <span>USGS</span> <span>National</span> <span>Map</span> <span>3DEP</span> <span>Downloadable</span> <span>Data</span> <span>Collection</span> - <span>ScienceBase</span>-<span>Catalog</span>.”</span> 2025. <a href="https://www.sciencebase.gov/catalog/item/4f70aa9fe4b058caae3f8de5">https://www.sciencebase.gov/catalog/item/4f70aa9fe4b058caae3f8de5</a>.
+</div>
+<div id="ref-ferreira_vertical_2021" class="csl-entry" role="listitem">
+Ferreira, Zuleide, and Pedro Cabral. 2021. <span>“Vertical <span>Accuracy</span> <span>Assessment</span> of <span>ALOS</span> <span>PALSAR</span>, <span>GMTED2010</span>, <span>SRTM</span> and <span>Topodata</span> <span>Digital</span> <span>Elevation</span> <span>Models</span>.”</span> In <em>Proceedings of the 7th <span>International</span> <span>Conference</span> on <span>Geographical</span> <span>Information</span> <span>Systems</span> <span>Theory</span>, <span>Applications</span> and <span>Management</span> - <span>GISTAM</span></em>, 116–24. Online Streaming, — Select a Country —: SciTePress. <a href="https://doi.org/10.5220/0010404001160124">https://doi.org/10.5220/0010404001160124</a>.
+</div>
+<div id="ref-ho_global_2025" class="csl-entry" role="listitem">
+Ho, Yufeng, and Tom Hengl. 2025. <span>“Global <span>Ensemble</span> <span>Digital</span> <span>Terrain</span> <span>Model</span> 30m (<span>GEDTM30</span>).”</span> Zenodo. <a href="https://doi.org/10.5281/ZENODO.14900181">https://doi.org/10.5281/ZENODO.14900181</a>.
+</div>
+<div id="ref-mbizvo_dependence_2024" class="csl-entry" role="listitem">
+Mbizvo, Gashirai K., and Andrew J. Larner. 2024. <span>“On the <span>Dependence</span> of the <span>Critical</span> <span>Success</span> <span>Index</span> (<span>CSI</span>) on <span>Prevalence</span>.”</span> <em>Diagnostics</em> 14 (5): 545. <a href="https://doi.org/10.3390/diagnostics14050545">https://doi.org/10.3390/diagnostics14050545</a>.
+</div>
+<div id="ref-nandam_framework_2024" class="csl-entry" role="listitem">
+Nandam, Vineela, and P. L. Patel. 2024. <span>“A Framework to Assess Suitability of Global Digital Elevation Models for Hydrodynamic Modelling in Data Scarce Regions.”</span> <em>Journal of Hydrology</em> 630 (February): 130654. <a href="https://doi.org/10.1016/j.jhydrol.2024.130654">https://doi.org/10.1016/j.jhydrol.2024.130654</a>.
+</div>
+<div id="ref-nasametiaistjapan_spacesystems_and_usjapan_aster_science_team_aster_2019" class="csl-entry" role="listitem">
+NASA/METI/AIST/Japan Spacesystems and U.S./Japan ASTER Science Team. 2019. <span>“<span>ASTER</span> <span>Global</span> <span>Digital</span> <span>Elevation</span> <span>Model</span> <span>V003</span>.”</span> NASA Land Processes Distributed Active Archive Center. <a href="https://doi.org/10.5067/ASTER/ASTGTM.003">https://doi.org/10.5067/ASTER/ASTGTM.003</a>.
+</div>
+<div id="ref-opentopography_nasadem_2021" class="csl-entry" role="listitem">
+OpenTopography. 2021. <span>“<span>NASADEM</span> <span>Global</span> 1 Arc-Second <span>Digital</span> <span>Elevation</span> <span>Model</span>.”</span> OpenTopography. <a href="https://doi.org/10.5069/G93T9FD9">https://doi.org/10.5069/G93T9FD9</a>.
+</div>
+<div id="ref-noauthor_web_nodate" class="csl-entry" role="listitem">
+<span>“Web <span>Informatics</span> and <span>Mapping</span> (<span>WIM</span>).”</span> n.d. Upper Midwest Water Science Center. Accessed April 12, 2025. <a href="https://www.usgs.gov/centers/upper-midwest-water-science-center/web-informatics-and-mapping-wim">https://www.usgs.gov/centers/upper-midwest-water-science-center/web-informatics-and-mapping-wim</a>.
+</div>
+<div id="ref-xu_importance_2021" class="csl-entry" role="listitem">
+Xu, Kepeng, Jiayi Fang, Yongqiang Fang, Qinke Sun, Chengbo Wu, and Min Liu. 2021. <span>“The <span>Importance</span> of <span>Digital</span> <span>Elevation</span> <span>Model</span> <span>Selection</span> in <span>Flood</span> <span>Simulation</span> and a <span>Proposed</span> <span>Method</span> to <span>Reduce</span> <span>DEM</span> <span>Errors</span>: <span>A</span> <span>Case</span> <span>Study</span> in <span>Shanghai</span>.”</span> <em>International Journal of Disaster Risk Science</em> 12 (6): 890–902. <a href="https://doi.org/10.1007/s13753-021-00377-z">https://doi.org/10.1007/s13753-021-00377-z</a>.
+</div>
+<div id="ref-zanaga_esa_2022" class="csl-entry" role="listitem">
+Zanaga, Daniele, Ruben Van De Kerchove, Dirk Daems, Wanda De Keersmaecker, Carsten Brockmann, Grit Kirches, Jan Wevers, et al. 2022. <span>“<span>ESA</span> <span>WorldCover</span> 10 m 2021 V200.”</span> Zenodo. <a href="https://doi.org/10.5281/ZENODO.7254221">https://doi.org/10.5281/ZENODO.7254221</a>.
+</div>
+</div>
 </section>
 
 </main>

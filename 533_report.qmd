@@ -61,7 +61,7 @@ We use reference flood inundation maps generated from the USGS Flood Inundation 
 ![](533_images/usgs_dem.png)
 (c) USGS DEM
 
-![](533_images/elevations.svg)
+![](533_images/elevations.png)
 (d) Elevation comparison
 
 Visualization of different DEMs for a sample site.
@@ -99,7 +99,7 @@ Visualization of flood inundation maps for Fort Morgan, Colorado, at a stage of 
 
 Optimal Manning's *n* values were discovered for each DEM using Bayesian minimization. Examples of flood maps for the same sample site and stage for four DEMs are shown in @fig-floods. An example of the convergence and validation process for FABDEM is shown in @fig-convergence. From the figure, we can see that the optimizer converges after about 250 iterations, and that the validation score closely follows the training score, indicating that the optimizer is not over-fitting. This trend is similar across all DEMs, with convergence occurring between 200-300 iterations and no evidence of over-fitting.
 
-![FABDEM convergence plot](533_images/official_convergence_fabdem.png){#fig-convergence width=800}
+![FABDEM convergence plot](533_images/official_convergence_fabdem.png){#fig-convergence}
 
 @fig-n-vs-fstat shows the converged-upon Manning's *n* values for each land cover type and DEM, along with the corresponding CSI scores. The vertical red dotted lines indicate the range of typical Manning's *n* values for each land cover type, based on literature values.
 
@@ -129,7 +129,7 @@ df <- df |>
   ))
 ```
 ```{r}
-#| fig-width: 8
+#| fig-width: 7.5
 #| fig-height: 6
 #| fig-cap: "Manning's *n* vs Average F−Statistic Score for Different DEMs"
 #| label: fig-n-vs-fstat
